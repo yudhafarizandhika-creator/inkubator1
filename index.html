@@ -1,535 +1,978 @@
 <!doctype html>
-<html lang="id" class="h-full">
- <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Monitor Inkubator Telur Puyuh</title>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
-  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <script src="/_sdk/element_sdk.js"></script>
-  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
-  <script src="https://cdn.jsdelivr.net/npm/lucide@0.263.0/dist/umd/lucide.min.js" type="text/javascript"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
-  <style>
-    * { font-family: 'Space Grotesk', sans-serif; }
-    body { box-sizing: border-box; }
-    
-    .glass-card {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-    
-    .gradient-bg {
-      background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0d1b2a 100%);
-    }
-    
-    .glow-text {
-      text-shadow: 0 0 20px rgba(99, 102, 241, 0.5);
-    }
-    
-    .pulse-dot {
-      animation: pulse 2s ease-in-out infinite;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.5; transform: scale(1.2); }
-    }
-    
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-    
-    .fade-in {
-      animation: fadeIn 0.5s ease-out forwards;
-    }
-    
-    .stat-card {
-      transition: all 0.3s ease;
-    }
-    
-    .stat-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 10px 40px rgba(99, 102, 241, 0.2);
-    }
-    
-    .chart-container {
-      position: relative;
-      height: 350px;
-    }
-    
-    @media (max-width: 768px) {
-      .chart-container { height: 280px; }
-    }
-  </style>
- </head>
- <body class="h-full gradient-bg text-white overflow-auto">
-  <div class="min-h-full w-full p-4 md:p-6 lg:p-8">
-   <header class="text-center mb-8 fade-in">
-    <div class="flex items-center justify-center gap-4 md:gap-8 mb-4">
-     <div class="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 flex items-center justify-center glass-card rounded-full p-2 overflow-hidden"><img src="https://i.ibb.co.com/SX4cDvsc/logo-univ.png" alt="Logo Universitas" class="w-full h-full object-contain" loading="lazy" onerror="this.style.background='#e5e7eb'; this.alt='Logo tidak tersedia';">
-     </div>
-     <div class="flex-1">
-      <h1 id="page-title" class="text-4xl md:text-5xl lg:text-5xl font-bold glow-text bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">Monitor Inkubator Telur Puyuh</h1>
-     </div>
-     <div class="w-16 h-16 md:w-20 md:h-20 flex-shrink-0 flex items-center justify-center glass-card rounded-full p-2 overflow-hidden"><img src="https://i.ibb.co.com/wZ4p7xhb/logo-hima.png" alt="Logo HIMA" class="w-full h-full object-contain" loading="lazy" onerror="this.style.background='#e5e7eb'; this.alt='Logo tidak tersedia';">
-     </div>
-    </div>
-   </header>
-   <div class="flex flex-wrap justify-center gap-4 mb-6 fade-in" style="animation-delay: 0.1s">
-    <div class="glass-card rounded-full px-4 py-2 flex items-center gap-2">
-     <div id="status-dot" class="w-3 h-3 rounded-full bg-yellow-500 pulse-dot"></div><span id="status-text" class="text-sm">Menghubungkan...</span>
-    </div>
-    <div class="glass-card rounded-full px-4 py-2 flex items-center gap-2">
-     <span class="text-gray-400 text-sm">Update:</span> <span id="last-update" class="text-emerald-400 text-sm">-</span>
-    </div>
-   </div>
-   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 fade-in" style="animation-delay: 0.2s">
-    <div class="stat-card glass-card rounded-2xl p-4 md:p-5">
-     <div class="flex items-center gap-2 mb-2">
-      <span class="text-xs text-gray-400 uppercase tracking-wider">Suhu Raw</span>
-     </div>
-     <div class="text-2xl md:text-3xl font-bold text-orange-400">
-      <span id="temp-raw">--</span> <span class="text-lg">°C</span>
-     </div>
-    </div>
-    <div class="stat-card glass-card rounded-2xl p-4 md:p-5">
-     <div class="flex items-center gap-2 mb-2">
-      <span class="text-xs text-gray-400 uppercase tracking-wider">Suhu Kalman</span>
-     </div>
-     <div class="text-2xl md:text-3xl font-bold text-amber-400">
-      <span id="temp-kalman">--</span> <span class="text-lg">°C</span>
-     </div>
-    </div>
-    <div class="stat-card glass-card rounded-2xl p-4 md:p-5">
-     <div class="flex items-center gap-2 mb-2">
-      <span class="text-xs text-gray-400 uppercase tracking-wider">Kelembapan Raw</span>
-     </div>
-     <div class="text-2xl md:text-3xl font-bold text-blue-400">
-      <span id="humid-raw">--</span> <span class="text-lg">%</span>
-     </div>
-    </div>
-    <div class="stat-card glass-card rounded-2xl p-4 md:p-5">
-     <div class="flex items-center gap-2 mb-2">
-      <span class="text-xs text-gray-400 uppercase tracking-wider">Kelembapan Kalman</span>
-     </div>
-     <div class="text-2xl md:text-3xl font-bold text-cyan-400">
-      <span id="humid-kalman">--</span> <span class="text-lg">%</span>
-     </div>
-    </div>
-   </div>
-   <div class="glass-card rounded-2xl p-4 mb-6 fade-in" style="animation-delay: 0.24s">
-    <div class="flex flex-wrap items-center justify-center gap-8">
-     <div class="flex items-center gap-2">
-      <span class="text-gray-400 text-sm">Pemanas:</span> <span id="heater-status" class="font-semibold px-3 py-1 rounded-lg bg-red-900/50 text-red-400">OFF</span>
-     </div>
-     <div class="flex items-center gap-2">
-      <span class="text-gray-400 text-sm">Kipas:</span> <span id="fan-status" class="font-semibold px-3 py-1 rounded-lg bg-red-900/50 text-red-400">OFF</span>
-     </div>
-    </div>
-   </div>
-   <div class="glass-card rounded-2xl p-4 mb-6 fade-in" style="animation-delay: 0.25s">
-    <div class="flex flex-wrap items-center justify-center gap-4 md:gap-8">
-     <div class="flex items-center gap-2">
-      <span class="text-gray-400 text-sm">Target Suhu:</span> <span class="text-white font-semibold">37-38°C</span>
-     </div>
-     <div class="flex items-center gap-2">
-      <span class="text-gray-400 text-sm">Target Kelembapan:</span> <span class="text-white font-semibold">60-70%</span>
-     </div>
-     <div id="incubator-status" class="flex items-center gap-2 px-4 py-1 rounded-full bg-gray-700">
-      <span class="text-sm">Menunggu data...</span>
-     </div>
-    </div>
-   </div>
-   <div class="glass-card rounded-2xl p-4 md:p-6 mb-6 fade-in" style="animation-delay: 0.27s">
-    <div class="flex flex-col md:flex-row items-center justify-between gap-4">
-     <div class="flex-1">
-      <h3 class="text-lg font-semibold mb-2">Waktu Inkubasi</h3>
-      <div class="flex items-baseline gap-2 mb-3">
-       <div class="text-4xl font-bold text-emerald-400">
-        <span id="incubation-days">0</span>
-       </div><span class="text-gray-400">Hari</span>
-       <div class="text-3xl font-bold text-cyan-400 ml-4">
-        <span id="incubation-time">00:00:00</span>
-       </div>
-      </div>
-     </div>
-     <div class="flex gap-3 flex-wrap md:flex-col"><button id="btn-start" class="glass-card px-6 py-3 rounded-lg hover:bg-emerald-600/30 transition text-emerald-400 hover:text-emerald-300 text-sm font-semibold cursor-pointer active:scale-95">Mulai Inkubasi</button> <button id="btn-reset" class="glass-card px-6 py-3 rounded-lg hover:bg-red-600/30 transition text-red-400 hover:text-red-300 text-sm font-semibold cursor-pointer active:scale-95" style="display:none;">Reset</button>
-     </div>
-    </div>
-   </div>
-   <div class="mb-6 fade-in" style="animation-delay: 0.3s">
-    <div class="mb-6">
-     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-2xl font-bold">Grafik Suhu</h2>
-      <div class="flex gap-4">
-       <label class="flex items-center gap-2 cursor-pointer"> <input type="checkbox" id="showTempRaw" checked class="w-4 h-4 rounded"> <span class="text-sm text-gray-300">Suhu Raw</span> </label> <label class="flex items-center gap-2 cursor-pointer"> <input type="checkbox" id="showTempKalman" checked class="w-4 h-4 rounded"> <span class="text-sm text-gray-300">Suhu Kalman</span> </label>
-      </div>
-     </div>
-     <div class="glass-card rounded-2xl p-4 md:p-6">
-      <div class="chart-container">
-       <canvas id="tempChart"></canvas>
-      </div>
-     </div>
-    </div>
-    <div>
-     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-2xl font-bold">Grafik Kelembapan</h2>
-      <div class="flex gap-4">
-       <label class="flex items-center gap-2 cursor-pointer"> <input type="checkbox" id="showHumidRaw" checked class="w-4 h-4 rounded"> <span class="text-sm text-gray-300">Kelembapan Raw</span> </label> <label class="flex items-center gap-2 cursor-pointer"> <input type="checkbox" id="showHumidKalman" checked class="w-4 h-4 rounded"> <span class="text-sm text-gray-300">Kelembapan Kalman</span> </label>
-      </div>
-     </div>
-     <div class="glass-card rounded-2xl p-4 md:p-6">
-      <div class="chart-container">
-       <canvas id="humidChart"></canvas>
-      </div>
-     </div>
-    </div>
-   </div>
-   <footer class="text-center mt-6 text-gray-500 text-sm fade-in" style="animation-delay: 0.5s">
-    <p>Teknik Elektro | Universitas Teknokrat Indonesia</p>
-   </footer>
-  </div>
-  <script>
-    /* ==================== FIREBASE CONFIGURATION ==================== */
-    const firebaseConfig = {
-      apiKey: "AIzaSyB5gBzDDgrNQU3XZXHwAAy9sQZx3pFEHJ4",
-      authDomain: "inkubator-penetas-telur-puyuh.firebaseapp.com",
-      databaseURL: "https://inkubator-penetas-telur-puyuh-default-rtdb.asia-southeast1.firebasedatabase.app",
-      projectId: "inkubator-penetas-telur-puyuh",
-      storageBucket: "inkubator-penetas-telur-puyuh.firebasestorage.app",
-      messagingSenderId: "700451083484",
-      appId: "1:700451083484:web:78d2c8f99711b058c8d019"
-    };
+<html lang="id">
 
-    let firebaseApp = null;
-    let firebaseDB = null;
-    let isFirebaseReady = false;
+<head>
 
-    try {
-      firebaseApp = firebase.initializeApp(firebaseConfig);
-      firebaseDB = firebase.database(firebaseApp);
-      isFirebaseReady = true;
-      console.log("✅ Firebase initialized successfully");
-      updateConnectionStatus(true);
-    } catch (error) {
-      console.warn("⚠️ Firebase initialization failed:", error.message);
-      isFirebaseReady = false;
-      updateConnectionStatus(false);
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    /* ==================== GLOBAL VARIABLES ==================== */
-    const MAX_DATA_POINTS = 600; // 10 menit (600 detik)
-    let tempRawData = [], tempKalmanData = [], humidRawData = [], humidKalmanData = [], labels = [];
-    let isConnected = false, fetchInterval = null, tempChart = null, humidChart = null;
-    let incubationData = null, incubationTimer = null;
-    let dataSource = 'none';
-    let lastDataTimeout = null;
+<title>Monitoring Inkubator Telur Puyuh</title>
 
-    const chartOptions = {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { intersect: false, mode: 'index' },
-      plugins: {
-        legend: { display: true, position: 'top', labels: { color: 'rgba(255, 255, 255, 0.7)', usePointStyle: true } },
-        tooltip: { 
-          backgroundColor: 'rgba(15, 15, 35, 0.9)', 
-          titleColor: '#fff', 
-          bodyColor: '#fff', 
-          borderWidth: 1,
-          callbacks: {
-            title: function(context) {
-              const idx = context[0].dataIndex;
-              const startTime = new Date();
-              startTime.setSeconds(startTime.getSeconds() - (labels.length - idx - 1));
-              return startTime.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            }
-          }
-        }
-      },
-      scales: {
-        x: { 
-          grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
-          ticks: { color: 'rgba(255, 255, 255, 0.5)', maxTicksLimit: 8 } 
-        },
-        y: { 
-          grid: { color: 'rgba(255, 255, 255, 0.05)' }, 
-          ticks: { color: 'rgba(255, 255, 255, 0.5)' } 
-        }
-      }
-    };
+<!-- FIREBASE -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-    function getAutoScale(dataArrays, padding = 5) {
-      const allData = dataArrays.flat().filter(v => v !== null && v !== undefined && !isNaN(v));
-      if (allData.length === 0) return { min: 0, max: 10 };
-      
-      const min = Math.min(...allData);
-      const max = Math.max(...allData);
-      const range = max - min || 1;
-      
-      return {
-        min: Math.floor((min - padding) * 2) / 2,
-        max: Math.ceil((max + padding) * 2) / 2
-      };
-    }
+<!-- TAILWIND -->
+<script src="https://cdn.tailwindcss.com"></script>
 
-    function initCharts() {
-      const tempCtx = document.getElementById('tempChart').getContext('2d');
-      tempChart = new Chart(tempCtx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            { label: 'Suhu Raw (°C)', data: tempRawData, borderColor: '#ff4444', backgroundColor: 'rgba(255, 68, 68, 0.1)', fill: true, pointRadius: 1.5 },
-            { label: 'Suhu Kalman (°C)', data: tempKalmanData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, pointRadius: 1.5 }
-          ]
-        },
-        options: { 
-          ...chartOptions, 
-          scales: { 
-            ...chartOptions.scales, 
-            y: { 
-              ...chartOptions.scales.y, 
-              type: 'linear'
-            } 
-          } 
-        }
-      });
+<!-- CHART -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-      const humidCtx = document.getElementById('humidChart').getContext('2d');
-      humidChart = new Chart(humidCtx, {
-        type: 'line',
-        data: {
-          labels: labels,
-          datasets: [
-            { label: 'Kelembapan Raw (%)', data: humidRawData, borderColor: '#f472b6', backgroundColor: 'rgba(244, 114, 182, 0.1)', fill: true, pointRadius: 1.5 },
-            { label: 'Kelembapan Kalman (%)', data: humidKalmanData, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.1)', fill: true, pointRadius: 1.5 }
-          ]
-        },
-        options: { 
-          ...chartOptions, 
-          scales: { 
-            ...chartOptions.scales, 
-            y: { 
-              ...chartOptions.scales.y, 
-              type: 'linear'
-            } 
-          } 
-        }
-      });
+<!-- EXCEL -->
+<script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
 
-      document.getElementById('showTempRaw').addEventListener('change', (e) => { tempChart.getDatasetMeta(0).hidden = !e.target.checked; tempChart.update('none'); });
-      document.getElementById('showTempKalman').addEventListener('change', (e) => { tempChart.getDatasetMeta(1).hidden = !e.target.checked; tempChart.update('none'); });
-      document.getElementById('showHumidRaw').addEventListener('change', (e) => { humidChart.getDatasetMeta(0).hidden = !e.target.checked; humidChart.update('none'); });
-      document.getElementById('showHumidKalman').addEventListener('change', (e) => { humidChart.getDatasetMeta(1).hidden = !e.target.checked; humidChart.update('none'); });
-    }
+<style>
 
-    function updateConnectionStatus(connected) {
-      const dot = document.getElementById('status-dot');
-      const txt = document.getElementById('status-text');
-      dot.className = connected ? 'w-3 h-3 rounded-full bg-emerald-500 pulse-dot' : 'w-3 h-3 rounded-full bg-red-500 pulse-dot';
-      txt.textContent = connected ? 'Terhubung' : 'Tidak Terhubung';
-      txt.className = connected ? 'text-sm text-emerald-400' : 'text-sm text-red-400';
-    }
+body{
+background:#f5f7fb;
+font-family:sans-serif;
+color:#111827;
+}
 
-    function processData(data) {
-      const now = new Date();
-      const timeStr = now.toLocaleTimeString('id-ID');
-      
-      let labelText = '';
-      const secondsElapsed = labels.length;
-      if (secondsElapsed % 60 === 0 && secondsElapsed > 0) {
-        labelText = now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-      }
-      labels.push(labelText);
-      
-      tempRawData.push(data.temperature_raw);
-      tempKalmanData.push(data.temperature_kalman);
-      humidRawData.push(data.humidity_raw);
-      humidKalmanData.push(data.humidity_kalman);
-      
-      if (labels.length > MAX_DATA_POINTS) {
-        labels.shift();
-        tempRawData.shift();
-        tempKalmanData.shift();
-        humidRawData.shift();
-        humidKalmanData.shift();
-      }
-      
-      const tempScale = getAutoScale([tempRawData, tempKalmanData], 2);
-      tempChart.options.scales.y.min = tempScale.min;
-      tempChart.options.scales.y.max = tempScale.max;
-      
-      const humidScale = getAutoScale([humidRawData, humidKalmanData], 5);
-      humidChart.options.scales.y.min = humidScale.min;
-      humidChart.options.scales.y.max = humidScale.max;
-      
-      tempChart.update('none');
-      humidChart.update('none');
-      
-      document.getElementById('temp-raw').textContent = data.temperature_raw.toFixed(1);
-      document.getElementById('temp-kalman').textContent = data.temperature_kalman.toFixed(2);
-      document.getElementById('humid-raw').textContent = data.humidity_raw.toFixed(1);
-      document.getElementById('humid-kalman').textContent = data.humidity_kalman.toFixed(2);
-      document.getElementById('last-update').textContent = timeStr;
-      
-      updateIncubatorStatus(data.temperature_kalman, data.humidity_kalman);
-    }
+.dashboard-card{
+background:white;
+border-radius:18px;
+padding:20px;
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
+transition:0.3s;
+}
 
-    function updateIncubatorStatus(temp, humid) {
-      const statusEl = document.getElementById('incubator-status');
-      let text = 'Kondisi Optimal ✓';
-      let bgClass = 'bg-emerald-900/50';
-      
-      const tempOk = temp >= 37 && temp <= 38;
-      const humidOk = humid >= 60 && humid <= 70;
-      
-      if (!tempOk && !humidOk) {
-        text = 'Suhu & Kelembapan di luar range ⚠️';
-        bgClass = 'bg-red-900/50';
-      } else if (!tempOk) {
-        text = temp < 37 ? 'Suhu terlalu rendah ❄️' : 'Suhu terlalu tinggi 🔥';
-        bgClass = 'bg-orange-900/50';
-      } else if (!humidOk) {
-        text = humid < 60 ? 'Kelembapan terlalu rendah 💧' : 'Kelembapan terlalu tinggi 💦';
-        bgClass = 'bg-blue-900/50';
-      }
-      
-      statusEl.className = `flex items-center gap-2 px-4 py-1 rounded-full ${bgClass}`;
-      statusEl.innerHTML = `<span class="text-sm">${text}</span>`;
-      
-      const heaterEl = document.getElementById('heater-status');
-      if (temp < 37.5) {
-        heaterEl.textContent = 'ON';
-        heaterEl.className = 'font-semibold px-3 py-1 rounded-lg bg-emerald-600/50 text-emerald-300';
-      } else {
-        heaterEl.textContent = 'OFF';
-        heaterEl.className = 'font-semibold px-3 py-1 rounded-lg bg-red-900/50 text-red-400';
-      }
-      
-      const fanEl = document.getElementById('fan-status');
-      if (humid > 70) {
-        fanEl.textContent = 'ON';
-        fanEl.className = 'font-semibold px-3 py-1 rounded-lg bg-emerald-600/50 text-emerald-300';
-      } else {
-        fanEl.textContent = 'OFF';
-        fanEl.className = 'font-semibold px-3 py-1 rounded-lg bg-red-900/50 text-red-400';
-      }
-    }
+.dashboard-card:hover{
+transform:translateY(-3px);
+}
 
-    /* ==================== FIREBASE LISTENER ==================== */
-    function setupFirebaseListener() {
-      if (!isFirebaseReady || !firebaseDB) {
-        console.warn("Firebase belum siap");
-        return;
-      }
+.chart-container{
+height:350px;
+}
 
-      try {
-        const sensorRef = firebase.database().ref('sensor');
-        
-        sensorRef.on('value', (snapshot) => {
-          try {
-            const data = snapshot.val();
-            if (data) {
-              console.log("🔥 Firebase data received:", data);
-              
-              if (lastDataTimeout) clearTimeout(lastDataTimeout);
-              lastDataTimeout = setTimeout(() => {
-                console.log("⚠️ Data tidak update selama 10 detik");
-                updateConnectionStatus(false);
-              }, 10000);
-              
-              dataSource = 'Firebase';
-              updateConnectionStatus(true);
-              processData({
-                temperature_raw: parseFloat(data.temperature_raw) || 0,
-                temperature_kalman: parseFloat(data.temperature_kalman) || 0,
-                humidity_raw: parseFloat(data.humidity_raw) || 0,
-                humidity_kalman: parseFloat(data.humidity_kalman) || 0
-              });
-            }
-          } catch (error) {
-            console.error("Error processing Firebase data:", error);
-          }
-        }, (error) => {
-          console.warn("Firebase listener error:", error.message);
-          updateConnectionStatus(false);
-        });
-      } catch (error) {
-        console.error("Firebase setup error:", error);
-        updateConnectionStatus(false);
-      }
-    }
+.logo{
+width:80px;
+height:80px;
+border-radius:50%;
+object-fit:cover;
+}
 
-    async function startIncubation() {
-      console.log("🎬 Start Incubation clicked!");
-      const startTime = new Date().toISOString();
-      const res = await window.dataSdk.create({ start_time: startTime });
-      if (res.isOk) {
-        console.log("✅ Data saved to sheet");
-        incubationData = { start_time: startTime, __backendId: res.data };
-        document.getElementById('btn-start').style.display = 'none';
-        document.getElementById('btn-reset').style.display = 'block';
-        startIncubationTimer();
-        console.log("✅ Incubation started and timer running!");
-      } else {
-        console.error("❌ Failed to start incubation:", res.error);
-      }
-    }
+table{
+width:100%;
+border-collapse:collapse;
+}
 
-    function startIncubationTimer() {
-      if(incubationTimer) clearInterval(incubationTimer);
-      incubationTimer = setInterval(() => {
-        if(!incubationData) return;
-        const diff = new Date() - new Date(incubationData.start_time);
-        const d = Math.floor(diff / 86400000);
-        const h = String(Math.floor((diff % 86400000) / 3600000)).padStart(2,'0');
-        const m = String(Math.floor((diff % 3600000) / 60000)).padStart(2,'0');
-        const s = String(Math.floor((diff % 60000) / 1000)).padStart(2,'0');
-        document.getElementById('incubation-days').textContent = d;
-        document.getElementById('incubation-time').textContent = `${h}:${m}:${s}`;
-      }, 1000);
-    }
+th,td{
+padding:10px;
+border:1px solid #d1d5db;
+text-align:center;
+}
 
-    async function resetIncubation() {
-      if(incubationTimer) clearInterval(incubationTimer);
-      if(incubationData && window.dataSdk && incubationData.__backendId) {
-        const res = await window.dataSdk.delete(incubationData);
-        console.log("✅ Data deleted from sheet");
-      }
-      incubationData = null;
-      document.getElementById('btn-start').style.display = 'block';
-      document.getElementById('btn-reset').style.display = 'none';
-      document.getElementById('incubation-days').textContent = '0';
-      document.getElementById('incubation-time').textContent = '00:00:00';
-    }
+th{
+background:#e5e7eb;
+}
 
-    document.addEventListener('DOMContentLoaded', () => {
-      initCharts();
-      
-      // Setup button event listeners
-      const btnStart = document.getElementById('btn-start');
-      const btnReset = document.getElementById('btn-reset');
-      
-      btnStart.addEventListener('click', startIncubation);
-      btnReset.addEventListener('click', resetIncubation);
-      
-      console.log("✅ Buttons initialized");
-      
-      if (isFirebaseReady) {
-        setupFirebaseListener();
-        console.log("🔥 Firebase listener diaktifkan");
-      } else {
-        console.log("Firebase tidak tersedia");
-        updateConnectionStatus(false);
-      }
-      
-      lucide.createIcons();
-    });
-  </script>
- <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9f16dfd3e1b2fda3',t:'MTc3NzA1MjIzMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+tr:nth-child(even){
+background:#f9fafb;
+}
+
+.status-on{
+background:#22c55e;
+color:white;
+padding:6px 12px;
+border-radius:10px;
+font-weight:bold;
+display:inline-block;
+}
+
+.status-off{
+background:#ef4444;
+color:white;
+padding:6px 12px;
+border-radius:10px;
+font-weight:bold;
+display:inline-block;
+}
+
+</style>
+
+</head>
+
+<body class="p-5">
+
+<!-- ================= HEADER ================= -->
+
+<div class="flex justify-center items-center gap-6 mb-5">
+
+<img 
+src="https://i.ibb.co.com/SX4cDvsc/logo-univ.png"
+class="logo"
+>
+
+<div class="text-center">
+
+<h1 class="text-4xl font-bold text-center">
+Monitoring Inkubator Telur Puyuh
+</h1>
+
+</div>
+
+<img 
+src="https://i.ibb.co.com/wZ4p7xhb/logo-hima.png"
+class="logo"
+>
+
+</div>
+
+<!-- ================= WIFI + CLOCK ================= -->
+
+<div class="flex justify-center gap-4 mb-6">
+
+<div 
+class="flex items-center gap-2 px-5 py-2 rounded-full border border-gray-300 bg-white shadow-sm"
+>
+
+<div 
+id="wifi-dot"
+class="w-3 h-3 rounded-full bg-red-500"
+></div>
+
+<span 
+id="wifi-status"
+class="text-sm font-medium text-red-500"
+>
+Tidak Terhubung
+</span>
+
+</div>
+
+<div 
+class="flex items-center gap-2 px-5 py-2 rounded-full border border-gray-300 bg-white shadow-sm"
+>
+
+<span class="text-sm text-gray-500">
+Update:
+</span>
+
+<span 
+id="clock"
+class="text-sm font-semibold text-green-500"
+>
+--
+</span>
+
+</div>
+
+</div>
+
+<!-- ================= STATUS RELAY ================= -->
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-6">
+
+<div class="dashboard-card text-center">
+
+<h2 class="text-xl font-bold mb-3">
+Lampu
+
+<span id="lamp-status" class="status-off">
+OFF
+</span>
+
+</h2>
+
+</div>
+
+<div class="dashboard-card text-center">
+
+<h2 class="text-xl font-bold mb-3">
+Kipas
+
+<span id="fan-status" class="status-off">
+OFF
+</span>
+
+</h2>
+
+</div>
+
+<div class="dashboard-card text-center">
+
+<h2 class="text-xl font-bold mb-3">
+Motor
+
+<span id="motor-status" class="status-off">
+OFF
+</span>
+
+</h2>
+
+</div>
+
+</div>
+
+<!-- ================= SENSOR ================= -->
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+
+<div class="dashboard-card">
+
+<h2 class="text-xl font-bold mb-3">
+🌡️ Temperature Raw
+</h2>
+
+<p id="temp-raw" class="text-4xl font-bold text-red-500">
+-
+</p>
+
+</div>
+
+<div class="dashboard-card">
+
+<h2 class="text-xl font-bold mb-3">
+🌡️ Temperature Kalman
+</h2>
+
+<p id="temp-kalman" class="text-4xl font-bold text-green-500">
+-
+</p>
+
+</div>
+
+<div class="dashboard-card">
+
+<h2 class="text-xl font-bold mb-3">
+💧 Humidity Raw
+</h2>
+
+<p id="humid-raw" class="text-4xl font-bold text-orange-500">
+-
+</p>
+
+</div>
+
+<div class="dashboard-card">
+
+<h2 class="text-xl font-bold mb-3">
+💧 Humidity Kalman
+</h2>
+
+<p id="humid-kalman" class="text-4xl font-bold text-blue-500">
+-
+</p>
+
+</div>
+
+</div>
+
+<!-- ================= GRAFIK SUHU ================= -->
+
+<div class="dashboard-card mb-6">
+
+<div class="flex justify-between items-center mb-5">
+
+<h2 class="text-2xl font-bold">
+Grafik Suhu
+</h2>
+
+<button
+onclick="resetTempGraph()"
+class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+>
+Reset Grafik
+</button>
+
+</div>
+
+<div class="chart-container">
+<canvas id="tempChart"></canvas>
+</div>
+
+</div>
+
+<!-- ================= GRAFIK KELEMBAPAN ================= -->
+
+<div class="dashboard-card mb-6">
+
+<div class="flex justify-between items-center mb-5">
+
+<h2 class="text-2xl font-bold">
+Grafik Kelembapan
+</h2>
+
+<button
+onclick="resetHumidGraph()"
+class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg"
+>
+Reset Grafik
+</button>
+
+</div>
+
+<div class="chart-container">
+<canvas id="humidChart"></canvas>
+</div>
+
+</div>
+
+<!-- ================= TABEL ================= -->
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-5 mb-6">
+
+<div class="dashboard-card">
+
+<div class="flex justify-between items-center mb-4">
+
+<h2 class="text-2xl font-bold">
+Tabel Suhu
+</h2>
+
+<button
+onclick="downloadExcelTemp()"
+class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg"
+>
+Download
+</button>
+
+</div>
+
+<div style="max-height:350px;overflow:auto;">
+
+<table>
+
+<thead>
+<tr>
+<th>Waktu</th>
+<th>Suhu Raw</th>
+<th>Suhu Kalman</th>
+</tr>
+</thead>
+
+<tbody id="temp-table"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<div class="dashboard-card">
+
+<div class="flex justify-between items-center mb-4">
+
+<h2 class="text-2xl font-bold">
+Tabel Kelembapan
+</h2>
+
+<button
+onclick="downloadExcelHumid()"
+class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg"
+>
+Download
+</button>
+
+</div>
+
+<div style="max-height:350px;overflow:auto;">
+
+<table>
+
+<thead>
+<tr>
+<th>Waktu</th>
+<th>Kelembapan Raw</th>
+<th>Kelembapan Kalman</th>
+</tr>
+</thead>
+
+<tbody id="humid-table"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+</div>
+
+<!-- ================= FOOTER ================= -->
+
+<div class="dashboard-card text-center mt-10">
+
+<p class="text-gray-600 mt-2">
+Teknik Elektro - Universitas Teknokrat Indonesia
+</p>
+
+</div>
+
+<script>
+
+/* ================= FIREBASE ================= */
+
+const firebaseConfig = {
+
+apiKey: "AIzaSyA8CumeZ1WOOyHtZGkgN_FPVlfJVSprb3c",
+  authDomain: "inkubator-puyuh.firebaseapp.com",
+  databaseURL: "https://inkubator-puyuh-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "inkubator-puyuh",
+  storageBucket: "inkubator-puyuh.firebasestorage.app",
+  messagingSenderId: "439337697949",
+  appId: "1:439337697949:web:a4e4a9a3212fd3bf55ca74",
+  measurementId: "G-1Z0ZLQL1RW"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const db = firebase.database();
+
+/* ================= GLOBAL ================= */
+
+const MAX_DATA_POINTS = 3600;
+
+let labels=[];
+
+let tempRawData=[];
+let tempKalmanData=[];
+
+let humidRawData=[];
+let humidKalmanData=[];
+
+let tableData=[];
+
+/* ================= CLOCK ================= */
+
+function updateClock(){
+
+const now = new Date();
+
+document.getElementById('clock').innerHTML =
+now.toLocaleTimeString('id-ID');
+
+}
+
+setInterval(updateClock,1000);
+
+/* ================= GRAFIK SUHU ================= */
+
+const tempChart = new Chart(
+
+document.getElementById('tempChart'),
+
+{
+type:'line',
+
+data:{
+
+labels:labels,
+
+datasets:[
+
+{
+label:'Temp Raw',
+data:tempRawData,
+borderColor:'red',
+backgroundColor:'rgba(255,0,0,0.1)',
+pointRadius:1,
+borderWidth:2,
+tension:0.3
+},
+
+{
+label:'Temp Kalman',
+data:tempKalmanData,
+borderColor:'green',
+backgroundColor:'rgba(0,255,0,0.1)',
+pointRadius:1,
+borderWidth:2,
+tension:0.3
+}
+
+]
+
+},
+
+options:{
+
+responsive:true,
+
+plugins:{
+legend:{
+labels:{
+color:'black'
+}
+}
+},
+
+scales:{
+
+x:{
+ticks:{
+color:'black',
+maxTicksLimit:20
+}
+},
+
+y:{
+beginAtZero:false,
+ticks:{
+color:'black'
+}
+}
+
+}
+
+}
+
+});
+
+/* ================= GRAFIK KELEMBAPAN ================= */
+
+const humidChart = new Chart(
+
+document.getElementById('humidChart'),
+
+{
+type:'line',
+
+data:{
+
+labels:labels,
+
+datasets:[
+
+{
+label:'Humid Raw',
+data:humidRawData,
+borderColor:'orange',
+backgroundColor:'rgba(255,165,0,0.1)',
+pointRadius:1,
+borderWidth:2,
+tension:0.3
+},
+
+{
+label:'Humid Kalman',
+data:humidKalmanData,
+borderColor:'#00BFFF',
+backgroundColor:'rgba(0,191,255,0.1)',
+pointRadius:1,
+borderWidth:2,
+tension:0.3
+}
+
+]
+
+},
+
+options:{
+
+responsive:true,
+
+plugins:{
+legend:{
+labels:{
+color:'black'
+}
+}
+},
+
+scales:{
+
+x:{
+ticks:{
+color:'black',
+maxTicksLimit:20
+}
+},
+
+y:{
+beginAtZero:false,
+ticks:{
+color:'black'
+}
+}
+
+}
+
+}
+
+});
+
+/* ================= LOAD HISTORY ================= */
+
+db.ref("history").once("value", snapshot => {
+
+if(snapshot.exists()){
+
+const history = snapshot.val();
+
+Object.keys(history).forEach(key => {
+
+const d = history[key];
+
+labels.push(d.time);
+
+tempRawData.push(d.temperature_raw);
+tempKalmanData.push(d.temperature_kalman);
+
+humidRawData.push(d.humidity_raw);
+humidKalmanData.push(d.humidity_kalman);
+
+tableData.push({
+
+time:d.time,
+
+tRaw:d.temperature_raw,
+tKal:d.temperature_kalman,
+
+hRaw:d.humidity_raw,
+hKal:d.humidity_kalman
+
+});
+
+});
+
+tempChart.update();
+humidChart.update();
+
+updateTable();
+
+}
+
+});
+
+/* ================= PROCESS DATA ================= */
+
+function processData(data){
+
+const now = new Date();
+
+const timeString =
+now.toLocaleTimeString();
+
+/* SENSOR */
+
+document.getElementById('temp-raw').textContent =
+data.temperature_raw.toFixed(1) + " °C";
+
+document.getElementById('temp-kalman').textContent =
+data.temperature_kalman.toFixed(2) + " °C";
+
+document.getElementById('humid-raw').textContent =
+data.humidity_raw.toFixed(1) + " %";
+
+document.getElementById('humid-kalman').textContent =
+data.humidity_kalman.toFixed(2) + " %";
+
+/* RELAY */
+
+if(data.temperature_kalman < 38){
+
+setStatus('lamp-status',true);
+
+}else{
+
+setStatus('lamp-status',false);
+
+}
+
+if(data.humidity_kalman < 70){
+
+setStatus('fan-status',true);
+
+}else{
+
+setStatus('fan-status',false);
+
+}
+
+updateMotorStatus();
+
+/* SIMPAN HISTORY */
+
+const newData = {
+
+time:timeString,
+
+timestamp:Date.now(),
+
+temperature_raw:data.temperature_raw,
+temperature_kalman:data.temperature_kalman,
+
+humidity_raw:data.humidity_raw,
+humidity_kalman:data.humidity_kalman
+
+};
+
+db.ref("history").push(newData);
+
+/* UPDATE DATA */
+
+labels.push(timeString);
+
+tempRawData.push(data.temperature_raw);
+tempKalmanData.push(data.temperature_kalman);
+
+humidRawData.push(data.humidity_raw);
+humidKalmanData.push(data.humidity_kalman);
+
+tableData.push({
+
+time:timeString,
+
+tRaw:data.temperature_raw,
+tKal:data.temperature_kalman,
+
+hRaw:data.humidity_raw,
+hKal:data.humidity_kalman
+
+});
+
+/* LIMIT 1 JAM */
+
+while(labels.length > MAX_DATA_POINTS){
+
+labels.shift();
+
+tempRawData.shift();
+tempKalmanData.shift();
+
+humidRawData.shift();
+humidKalmanData.shift();
+
+tableData.shift();
+
+}
+
+updateTable();
+
+tempChart.update();
+humidChart.update();
+
+}
+
+/* ================= RESET GRAFIK SUHU ================= */
+
+function resetTempGraph(){
+
+labels = [];
+
+tempRawData = [];
+tempKalmanData = [];
+
+tableData = [];
+
+tempChart.data.labels = labels;
+
+tempChart.data.datasets[0].data = tempRawData;
+tempChart.data.datasets[1].data = tempKalmanData;
+
+tempChart.update();
+
+db.ref("history").remove();
+
+updateTable();
+
+}
+
+/* ================= RESET GRAFIK KELEMBAPAN ================= */
+
+function resetHumidGraph(){
+
+labels = [];
+
+humidRawData = [];
+humidKalmanData = [];
+
+tableData = [];
+
+humidChart.data.labels = labels;
+
+humidChart.data.datasets[0].data = humidRawData;
+humidChart.data.datasets[1].data = humidKalmanData;
+
+humidChart.update();
+
+db.ref("history").remove();
+
+updateTable();
+
+}
+
+/* ================= STATUS ================= */
+
+function setStatus(id,status){
+
+const el = document.getElementById(id);
+
+if(status){
+
+el.innerHTML = "ON";
+el.className = "status-on";
+
+}else{
+
+el.innerHTML = "OFF";
+el.className = "status-off";
+
+}
+
+}
+
+/* ================= MOTOR TIMER ================= */
+
+function updateMotorStatus(){
+
+const now = new Date();
+
+const minutes = now.getMinutes();
+
+if(minutes === 0){
+
+setStatus('motor-status',true);
+
+}else{
+
+setStatus('motor-status',false);
+
+}
+
+}
+
+/* ================= UPDATE TABLE ================= */
+
+function updateTable(){
+
+const tempTable =
+document.getElementById('temp-table');
+
+const humidTable =
+document.getElementById('humid-table');
+
+tempTable.innerHTML='';
+humidTable.innerHTML='';
+
+for(let i=tableData.length-1;i>=0;i--){
+
+const d=tableData[i];
+
+tempTable.innerHTML += `
+<tr>
+<td>${d.time}</td>
+<td>${d.tRaw.toFixed(1)}</td>
+<td>${d.tKal.toFixed(2)}</td>
+</tr>
+`;
+
+humidTable.innerHTML += `
+<tr>
+<td>${d.time}</td>
+<td>${d.hRaw.toFixed(1)}</td>
+<td>${d.hKal.toFixed(2)}</td>
+</tr>
+`;
+
+}
+
+}
+
+/* ================= DOWNLOAD SUHU ================= */
+
+function downloadExcelTemp(){
+
+let data = [
+["Waktu","Suhu Raw","Suhu Kalman"]
+];
+
+tableData.forEach(d=>{
+
+data.push([
+d.time,
+d.tRaw,
+d.tKal
+]);
+
+});
+
+const ws = XLSX.utils.aoa_to_sheet(data);
+
+const wb = XLSX.utils.book_new();
+
+XLSX.utils.book_append_sheet(
+wb,
+ws,
+"Data Suhu"
+);
+
+XLSX.writeFile(
+wb,
+"data_suhu.xlsx"
+);
+
+}
+
+/* ================= DOWNLOAD HUMID ================= */
+
+function downloadExcelHumid(){
+
+let data = [
+["Waktu","Humid Raw","Humid Kalman"]
+];
+
+tableData.forEach(d=>{
+
+data.push([
+d.time,
+d.hRaw,
+d.hKal
+]);
+
+});
+
+const ws = XLSX.utils.aoa_to_sheet(data);
+
+const wb = XLSX.utils.book_new();
+
+XLSX.utils.book_append_sheet(
+wb,
+ws,
+"Data Kelembapan"
+);
+
+XLSX.writeFile(
+wb,
+"data_kelembapan.xlsx"
+);
+
+}
+
+/* ================= FIREBASE LIVE ================= */
+
+db.ref("sensor").on("value", snap=>{
+
+if(snap.exists()){
+
+processData(snap.val());
+
+document.getElementById('wifi-status').innerHTML =
+"Terhubung";
+
+document.getElementById('wifi-status').className =
+"text-sm font-medium text-green-500";
+
+document.getElementById('wifi-dot').className =
+"w-3 h-3 rounded-full bg-green-500";
+
+}else{
+
+document.getElementById('wifi-status').innerHTML =
+"Tidak Terhubung";
+
+document.getElementById('wifi-status').className =
+"text-sm font-medium text-red-500";
+
+document.getElementById('wifi-dot').className =
+"w-3 h-3 rounded-full bg-red-500";
+
+}
+
+});
+
+</script>
+
+</body>
 </html>
